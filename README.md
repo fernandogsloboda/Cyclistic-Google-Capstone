@@ -10,7 +10,7 @@ The goal of this project was to analyze data from a bike-share company to identi
 
 ## 🔗 Project Links (Click to View)
 - 📊 **[Interactive Dashboard (Tableau)](https://public.tableau.com/app/profile/fernando.gryczynski.sloboda/viz/Cyclistic_Analysis_Portfolio/CyclisticUserAnalysis)** - Visual analysis of geography and peak hours.
-- 📑 **[Full Data Analysis Report (R)](file:///Users/fernando/Downloads/Cyclistic_Analise/Save.html#)** - Complete data cleaning, validation, and statistical analysis code.
+- 📑 **[Full Data Analysis Report (R)](file:///Users/fernando/Downloads/Cyclistic_Analise/index.html)** - Complete data cleaning, validation, and statistical analysis code.
 
 ## 🔍 Key Findings
 1. **Commute vs. Leisure:** Members use bikes strictly for commuting (peaks at 8am/5pm), while Casuals ride mostly on weekends.

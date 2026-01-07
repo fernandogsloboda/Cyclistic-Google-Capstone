@@ -1,0 +1,126 @@
+---
+title: "Cyclistic Bike-Share: Strategic Analysis"
+subtitle: "Google Data Analytics Professional Certificate - Capstone Project"
+author: "Fernando Sloboda"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    fig_width: 10
+    fig_height: 6
+---
+
+# 1. Executive Summary
+
+### The Business Task
+Cyclistic is a bike-share program based in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. 
+
+**My Goal:** I have been tasked to analyze how **Casual riders** and **Annual Members** use Cyclistic bikes differently to design a new marketing strategy.
+
+**Key Findings:**
+1.  **Commute vs. Leisure:** Members use bikes strictly for commuting (peaks at 8am/5pm), while Casuals ride mostly on weekends.
+2.  **Seasonality:** Casual ridership drops near zero in winter, presenting a retention challenge.
+3.  **Bike Preference:** Casual riders show a stronger preference for Electric Bikes compared to members.
+
+---
+
+# 2. Data Preparation
+
+We are using historical trip data from the last 12 months.
+
+```{r setup, message=FALSE, warning=FALSE}
+# --- LOAD PACKAGES ---
+if(!require(DT)) install.packages("DT", repos = "[http://cran.us.r-project.org](http://cran.us.r-project.org)")
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(scales)
+library(DT) 
+
+# --- IMPORT DATA ---
+path_to_files <- "Dados_Brutos"
+file_list <- list.files(path = path_to_files, pattern = "*.csv", full.names = TRUE)
+
+df_total <- file_list %>% 
+  map_df(~read_csv(., col_types = cols(.default = "c")))
+
+# --- DATA CLEANING ---
+df_clean <- df_total %>%
+  clean_names() %>% 
+  mutate(
+    started_at = ymd_hms(started_at), 
+    ended_at = ymd_hms(ended_at),
+    start_lat = as.numeric(start_lat),
+    start_lng = as.numeric(start_lng)
+  )
+
+# --- FEATURE ENGINEERING ---
+df_final <- df_clean %>%
+  mutate(
+    ride_length = as.numeric(difftime(ended_at, started_at, units = "mins")),
+    day_of_week = wday(started_at, label = TRUE, abbr = TRUE),
+    month = month(started_at, label = TRUE, abbr = TRUE),
+    hour = hour(started_at)
+  ) %>%
+  filter(ride_length >= 1) %>% 
+  drop_na()
+
+# Preview
+datatable(head(df_final, 50), options = list(scrollX = TRUE), caption = "Processed Data Sample")
+summary_stats <- df_final %>%
+  group_by(member_casual) %>%
+  summarise(
+    avg_duration_min = round(mean(ride_length), 2),
+    median_duration_min = round(median(ride_length), 2),
+    total_rides = n()
+  ) %>% 
+  mutate(percent_total = scales::percent(total_rides / sum(total_rides)))
+
+datatable(summary_stats, caption = "Key Metrics by User Type")
+custom_colors <- c("member" = "#2C3E50", "casual" = "#E67E22")
+
+df_final %>% 
+  group_by(member_casual, hour) %>% 
+  summarise(number_of_rides = n(), .groups = 'drop') %>% 
+  ggplot(aes(x = hour, y = number_of_rides, color = member_casual)) +
+  geom_line(size = 1.2) +
+  scale_x_continuous(breaks = seq(0, 23, 2)) +
+  scale_y_continuous(labels = comma) +
+  scale_color_manual(values = custom_colors) +
+  labs(
+    title = "Hourly Ride Demand", 
+    subtitle = "Members commute (8am/5pm spikes) vs Casuals leisure (Afternoon curve)",
+    x = "Hour of Day (24h)", y = "Number of Rides", color = "User Type"
+  ) +
+  theme_minimal()
+df_final %>% 
+  group_by(member_casual, month) %>% 
+  summarise(number_of_rides = n(), .groups = 'drop') %>% 
+  ggplot(aes(x = month, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  scale_y_continuous(labels = comma) +
+  scale_fill_manual(values = custom_colors) +
+  labs(
+    title = "Seasonality: Rides by Month", 
+    subtitle = "Casual ridership is highly dependent on summer weather.",
+    x = "Month", y = "Total Rides", fill = "User Type"
+  ) +
+  theme_minimal()
+df_final %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarise(number_of_rides = n(), .groups = 'drop') %>% 
+  ggplot(aes(x = rideable_type, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_y_continuous(labels = comma) +
+  scale_fill_manual(values = custom_colors) +
+  labs(
+    title = "Bike Type Preference", 
+    subtitle = "Distribution of rides by bicycle type.",
+    x = "Bike Type", y = "Number of Rides", fill = "User Type"
+  ) +
+  theme_minimal()
